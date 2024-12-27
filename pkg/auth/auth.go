@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/daalfox/go-auth-microservice/internal/middleware"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"gorm.io/gorm"
 )
 
@@ -28,9 +29,11 @@ type AuthService struct {
 }
 
 func (a *AuthService) mountHandlers() {
-	a.Router.Use(middleware.Logger)
+	a.Router.Use(chiMiddleware.Logger)
+	a.Router.Use(middleware.Json)
 
 	a.Router.Post("/register", a.Register)
+	a.Router.Post("/login", a.Login)
 }
 
 func (a *AuthService) Register(w http.ResponseWriter, r *http.Request) {
@@ -38,13 +41,12 @@ func (a *AuthService) Register(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
+		json.NewEncoder(w).Encode(err.Error())
 		return
 	}
 
 	issues := user.validate()
 	if len(issues) != 0 {
-		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(&issues)
 		return
@@ -55,20 +57,26 @@ func (a *AuthService) Register(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-type User struct {
-	gorm.Model
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-func (u *User) validate() []string {
-	issues := []string{}
-	if u.Username == "" {
-		issues = append(issues, "`username` is required")
-	}
-	if u.Password == "" {
-		issues = append(issues, "`password` is required")
+func (a *AuthService) Login(w http.ResponseWriter, r *http.Request) {
+	var user User
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(err.Error())
+		return
 	}
 
-	return issues
+	issues := user.validate()
+	if len(issues) != 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(&issues)
+		return
+	}
+
+	result := a.db.Where(&user).First(&user)
+
+	if result.Error == gorm.ErrRecordNotFound {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 }
