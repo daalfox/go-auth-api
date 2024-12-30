@@ -59,7 +59,11 @@ func (a *AuthService) Register(w http.ResponseWriter, r *http.Request) {
 	pw, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	user.Password = string(pw)
 
-	a.db.Create(&user)
+	result := a.db.Create(&user)
+	if result.Error == gorm.ErrDuplicatedKey {
+		w.WriteHeader(http.StatusConflict)
+		return
+	}
 
 	w.WriteHeader(http.StatusCreated)
 }
