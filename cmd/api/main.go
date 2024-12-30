@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/daalfox/go-auth-microservice/pkg/auth"
+	"github.com/daalfox/go-auth-api/pkg/auth"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

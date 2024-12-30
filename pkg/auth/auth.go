@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/daalfox/go-auth-microservice/internal/middleware"
+	"github.com/daalfox/go-auth-api/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
