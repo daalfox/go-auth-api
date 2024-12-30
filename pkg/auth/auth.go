@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -55,6 +56,9 @@ func (a *AuthService) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	pw, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	user.Password = string(pw)
+
 	a.db.Create(&user)
 
 	w.WriteHeader(http.StatusCreated)
@@ -76,9 +80,18 @@ func (a *AuthService) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := a.db.Where(&user).First(&user)
+	rawPassword := user.Password
+
+	result := a.db.Where("username = ?", user.Username).First(&user)
 
 	if result.Error == gorm.ErrRecordNotFound {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(rawPassword))
+
+	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
